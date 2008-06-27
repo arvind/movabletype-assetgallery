@@ -1,3 +1,6 @@
+# Asset Gallery - A plugin for Movable Type
+# Copyright (c) 2008, Six Apart
+
 package MT::Plugin::AssetGallery;
 
 use strict;

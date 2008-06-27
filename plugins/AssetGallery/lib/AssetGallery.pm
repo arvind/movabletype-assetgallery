@@ -336,11 +336,23 @@ sub _hdlr_assets {
     
     require MT::Asset;
     my @asset_ids = split /,/, $value;
+    my $count = 0;
+    my $asset_count = 0;
+    my $vars = $ctx->{__stash}{vars} ||= {};
     foreach my $id (@asset_ids) {
+        $count++;
+        
         my $asset = MT::Asset->load($id);
         next unless $asset;
         
+        $asset_count++;
+        
         local $ctx->{__stash}{asset} = $asset;
+        local $vars->{__first__} = $asset_count == 1;
+        local $vars->{__last__} = !defined $asset_ids[$count];
+        local $vars->{__odd__} = ($asset_count % 2) == 1;
+        local $vars->{__even__} = ($asset_count % 2) == 0;
+        local $vars->{__counter__} = $asset_count;
         defined(my $out = $builder->build($ctx, $tokens))
             or return $ctx->error($builder->errstr);
         $res .= $out;        
