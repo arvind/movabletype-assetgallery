@@ -100,6 +100,8 @@ sub CMSPostSave {
             $app->param($1, join ',', $customfield_value, $asset->id);
         }
 	}
+	
+	return 1;
 }
 ## Mostly copied from MT::App::CMS::Asset::_upload_file
 ## we have to make it more re-usable!!
