@@ -59,7 +59,8 @@ sub load_tags {
     my $cmpnt = MT->component('commercial');
     my $fields = $cmpnt->{customfields};
     unless ( $fields && @$fields ) {
-        &load_meta_fields;
+        require CustomFields::Util;
+        CustomFields::Util::load_meta_fields;
         $fields = $cmpnt->{customfields};
     }
 
