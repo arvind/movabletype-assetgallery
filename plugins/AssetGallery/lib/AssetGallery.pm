@@ -1,7 +1,38 @@
 package AssetGallery;
 
 use strict;
+use lib '/Users/jay/Sites/mt.local/html/41cs/lib';
+use lib '/Users/jay/Sites/mt.local/html/41cs/extlib';
 use MT::Util qw( encode_url );
+use Data::Dumper;
+
+
+# Because of the issue with MT 4.1 not recognizing the code ref for
+# populating the tags, I went a different way, trying to do it post or during init
+# Not sure whether init_app or init_request will be necessary to do so.
+sub init_app {
+    my $plugin = shift;
+    my ($app) = @_;
+    print STDERR "********************* In init_app for ".__PACKAGE__."\n";
+    my $r = $plugin->registry;
+    $r->{tags} = load_tags();
+    print STDERR Dumper($r);
+}
+
+sub init_request {
+    my $cb = shift;
+    my $plugin = shift;
+    my ($app) = @_;
+    print STDERR "********************* In init_request for ".__PACKAGE__."\n";
+    my $r = $plugin->registry;
+    # $r->{tags} = load_tags();
+    print STDERR Dumper($r);
+}
+
+sub template_source_edit_entry {
+    my ($cb, $app, $tmpl) = @_;
+    $$tmpl =~ s/(name="entry_form")/$1 enctype=\"multipart\/form-data\"/g;
+}
 
 sub load_customfield_type {
     my $customfield_type = {
@@ -56,23 +87,55 @@ sub load_customfield_type {
 }
 
 sub load_tags {
-    my $cmpnt = MT->component('commercial');
-    my $fields = $cmpnt->{customfields};
-    my $tags = {};
-    if ( $fields && @$fields ) {
-        foreach my $field ( @$fields ) {
-            my $tag = $field->tag;
-            next unless $tag;
-            if ($field->type =~ m/asset_gallery/) {
-                $tags->{block}->{$tag . 'Assets'} = sub {
-                    $_[0]->stash('field', $field);
-                    &_hdlr_assets;
-                };
-            }
+    my $tags = eval {
+        my $cmpnt = MT->component('commercial') or return {};
+        my $fields = $cmpnt->{customfields};
+        if (!$fields || !@$fields) {
+            require CustomFields::Util;
+            # 4.1 vs 4.2 difference -- Still not sure what the
+            # second one should be for MT 4.1
+            my $loader = CustomFields::Util->can('load_meta_fields')
+                      || CustomFields::Util->can('load_customfield_tags');
+            die "Could not find Custom Fields method" unless $loader;
+
+            $loader->();
+
+            $fields = $cmpnt->{customfields};
+            print STDERR "Fields: ".Dumper($fields);
+            print STDERR "\$cmpnt keys: ".Dumper([keys %$cmpnt]);
         }
+        return {} if !$fields || !@$fields;
+
+        my %block_tags = map { _tags_for_field($_) } @$fields;
+        my %tags = ( block => \%block_tags );
+
+        printf STDERR "\%tags: %s\n", Dumper(\%tags);
+        \%tags;
+    };
+    return $tags if defined $tags;
+    if (my $error = $@) {
+        eval { MT->log($error) };
     }
-    return $tags;
+    return {};
 }
+
+
+sub _tags_for_field {
+    my ($field) = @_;
+
+    # # print STDERR "Field: $field\n";
+    my $tag = $field->tag;
+    
+    # print STDERR "Field->tag: $tag\n";
+    return unless $tag and $field->type =~ m/asset_gallery/;
+
+    # printf STDERR "Field->type: %s\n", $field->type;
+    return (
+        "${tag}Assets"
+            => sub { $_[0]->stash('field', $field); &_hdlr_assets },
+    );
+}
+
 
 sub CMSPostSave {
     my ($cb, $app, $obj) = @_;
