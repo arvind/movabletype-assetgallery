@@ -60,7 +60,7 @@ sub load_tags {
     my $fields = $cmpnt->{customfields};
     unless ( $fields && @$fields ) {
         require CustomFields::Util;
-        CustomFields::Util::load_meta_fields;
+        CustomFields::Util::load_meta_fields();
         $fields = $cmpnt->{customfields};
     }
 
