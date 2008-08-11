@@ -6,6 +6,7 @@ use lib '/Users/jay/Sites/mt.local/html/41cs/extlib';
 use MT::Util qw( encode_url );
 use Data::Dumper;
 
+use constant DEBUG => 0;
 
 # Because of the issue with MT 4.1 not recognizing the code ref for
 # populating the tags, I went a different way, trying to do it post or during init
@@ -13,20 +14,20 @@ use Data::Dumper;
 sub init_app {
     my $plugin = shift;
     my ($app) = @_;
-    print STDERR "********************* In init_app for ".__PACKAGE__."\n";
+    DEBUG and print STDERR "********************* In init_app for ".__PACKAGE__."\n";
     my $r = $plugin->registry;
     $r->{tags} = load_tags();
-    print STDERR Dumper($r);
+    DEBUG and print STDERR Dumper($r);
 }
 
 sub init_request {
     my $cb = shift;
     my $plugin = shift;
     my ($app) = @_;
-    print STDERR "********************* In init_request for ".__PACKAGE__."\n";
+    DEBUG and print STDERR "********************* In init_request for ".__PACKAGE__."\n";
     my $r = $plugin->registry;
     # $r->{tags} = load_tags();
-    print STDERR Dumper($r);
+    DEBUG and print STDERR Dumper($r);
 }
 
 sub template_source_edit_entry {
@@ -101,15 +102,15 @@ sub load_tags {
             $loader->();
 
             $fields = $cmpnt->{customfields};
-            print STDERR "Fields: ".Dumper($fields);
-            print STDERR "\$cmpnt keys: ".Dumper([keys %$cmpnt]);
+            DEBUG and print STDERR "Fields: ".Dumper($fields);
+            DEBUG and print STDERR "\$cmpnt keys: ".Dumper([keys %$cmpnt]);
         }
         return {} if !$fields || !@$fields;
 
         my %block_tags = map { _tags_for_field($_) } @$fields;
         my %tags = ( block => \%block_tags );
 
-        printf STDERR "\%tags: %s\n", Dumper(\%tags);
+        DEBUG and printf STDERR "\%tags: %s\n", Dumper(\%tags);
         \%tags;
     };
     return $tags if defined $tags;
@@ -123,13 +124,13 @@ sub load_tags {
 sub _tags_for_field {
     my ($field) = @_;
 
-    # # print STDERR "Field: $field\n";
+    DEBUG > 1 and print STDERR "Field: $field\n";
     my $tag = $field->tag;
     
-    # print STDERR "Field->tag: $tag\n";
+    DEBUG > 1 and print STDERR "Field->tag: $tag\n";
     return unless $tag and $field->type =~ m/asset_gallery/;
 
-    # printf STDERR "Field->type: %s\n", $field->type;
+    DEBUG > 1 and printf STDERR "Field->type: %s\n", $field->type;
     return (
         "${tag}Assets"
             => sub { $_[0]->stash('field', $field); &_hdlr_assets },
